@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>3D Casino Game with Roulette</title>
+   <style>
+       body { margin: 0; overflow: hidden; }
+       canvas { display: block; }
+       #rouletteOverlay {
+           display: none;
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           transform: translate(-50%, -50%);
+           background: #222;
+           padding: 20px;
+           border-radius: 10px;
+           box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+           text-align: center;
+           color: white;
+       }
+       #roulette { width: 300px; height: 300px; border: 10px solid #000; border-radius: 50%; position: relative; margin: 0 auto; }
+       #ball { width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); }
+       #spinButton { margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+   </style>
+</head>
+<body>
+   <!-- 3D Canvas -->
+   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/PointerLockControls.js"></script>
+   
+   <!-- Roulette Overlay -->
+   <div id="rouletteOverlay">
+       <h2>Roulette Minigame</h2>
+       <div id="roulette">
+           <div id="ball"></div>
+       </div>
+       <button id="spinButton">Spin</button>
+       <button id="closeButton">Close</button>
+   </div>
+
+   <script>
+       // 3D Casino Setup
+       const scene = new THREE.Scene();
+       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+       const renderer = new THREE.WebGLRenderer();
+       renderer.setSize(window.innerWidth, window.innerHeight);
+       document.body.appendChild(renderer.domElement);
+
+       const floorGeometry = new THREE.PlaneGeometry(100, 100);
+       const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+       const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+       floor.rotation.x = Math.PI / 2;
+       scene.add(floor);
+
+       const controls = new THREE.PointerLockControls(camera, document.body);
+       document.addEventListener('click', () => controls.lock());
+       scene.add(controls.getObject());
+
+       const keys = { w: false, a: false, s: false, d: false };
+       document.addEventListener('keydown', (e) => keys[e.key] = true);
+       document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+       const speed = 0.1;
+       let nearRoulette = false;
+
+       function animate() {
+           if (keys.w) controls.moveForward(speed);
+           if (keys.s) controls.moveForward(-speed);
+           if (keys.a) controls.moveRight(-speed);
+           if (keys.d) controls.moveRight(speed);
+
+           renderer.render(scene, camera);
+           requestAnimationFrame(animate);
+       }
+
+       animate();
+
+       // Dummy Roulette Table (collision detection)
+       const rouletteTable = new THREE.Mesh(
+           new THREE.BoxGeometry(2, 2, 2),
+           new THREE.MeshBasicMaterial({ color: 0xff0000 })
+       );
+       rouletteTable.position.set(0, 1, -5);
+       scene.add(rouletteTable);
+
+       // Check if player is near the roulette table
+       function checkProximity() {
+           const distance = camera.position.distanceTo(rouletteTable.position);
+           nearRoulette = distance < 3;
+           if (nearRoulette) {
+               document.getElementById('rouletteOverlay').style.display = 'block';
+               controls.unlock(); // Mausfreigabe für das Minispiel
+           }
+       }
+
+       // Roulette Minigame Logic
+       const roulette = document.getElementById('roulette');
+       const ball = document.getElementById('ball');
+       const spinButton = document.getElementById('spinButton');
+       const closeButton = document.getElementById('closeButton');
+       let isSpinning = false;
+
+       spinButton.addEventListener('click', () => {
+           if (isSpinning) return;
+           isSpinning = true;
+
+           const rotations = Math.random() * 3 + 3;
+           const duration = 3000;
+
+           roulette.style.transition = `transform ${duration}ms ease-out`;
+           roulette.style.transform = `rotate(${rotations * 360}deg)`;
+
+           ball.style.transition = `top ${duration}ms linear, left ${duration}ms linear`;
+           ball.style.top = `${Math.random() * 200 + 50}px`;
+           ball.style.left = `${Math.random() * 200 + 50}px`;
+
+           setTimeout(() => {
+               isSpinning = false;
+               alert("Das Roulette hat gestoppt!");
+           }, duration);
+       });
+
+       closeButton.addEventListener('click', () => {
+           document.getElementById('rouletteOverlay').style.display = 'none';
+           controls.lock(); // Maussteuerung wieder aktivieren
+       });
+
+       // Taste 'E' zum Öffnen des Roulettes verwenden
+       document.addEventListener('keydown', (e) => {
+           if (e.key === 'e' && nearRoulette) {
+               checkProximity();
+           }
+       });
+   </script>
+</body>
+</html>
